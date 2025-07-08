@@ -1,0 +1,139 @@
+service : {
+  create_educator_profile : (text, text, vec text) -> (variant { 
+    ok : record {
+      User_principal : principal;
+      name : text;
+      bio : text;
+      expertise : vec text;
+      created_at : nat64;
+      updated_at : nat64;
+    }; 
+    err : text 
+  });
+
+  get_educator_profile : (opt principal) -> (variant { 
+    ok : record {
+      User_principal : principal;
+      name : text;
+      bio : text;
+      expertise : vec text;
+      created_at : nat64;
+      updated_at : nat64;
+    }; 
+    err : text 
+  });
+
+  create_course : (text, text, nat64) -> (variant { 
+    ok : record {
+      id : text;
+      title : text;
+      description : text;
+      educator_id : principal;
+      sections : vec record {
+        id : text;
+        title : text;
+        content : text;
+        order : nat32;
+      };
+      created_at : nat64;
+      updated_at : nat64;
+      published : bool;
+      token_reward : nat64;
+    }; 
+    err : text 
+  });
+
+  add_course_section : (text, text, text) -> (variant { 
+    ok : record {
+      id : text;
+      title : text;
+      description : text;
+      educator_id : principal;
+      sections : vec record {
+        id : text;
+        title : text;
+        content : text;
+        order : nat32;
+      };
+      created_at : nat64;
+      updated_at : nat64;
+      published : bool;
+      token_reward : nat64;
+    }; 
+    err : text 
+  });
+
+  publish_course : (text) -> (variant {
+    ok : record {
+      id : text;
+      title : text;
+      description : text;
+      educator_id : principal;
+      sections : vec record {
+        id : text;
+        title : text;
+        content : text;
+        order : nat32;
+      };
+      created_at : nat64;
+      updated_at : nat64;
+      published : bool;
+      token_reward : nat64;
+    }; 
+    err : text 
+  });
+
+  get_course : (text) -> (variant { 
+    ok : record {
+      id : text;
+      title : text;
+      description : text;
+      educator_id : principal;
+      sections : vec record {
+        id : text;
+        title : text;
+        content : text;
+        order : nat32;
+      };
+      created_at : nat64;
+      updated_at : nat64;
+      published : bool;
+      token_reward : nat64;
+    }; 
+    err : text 
+  });
+
+  get_published_courses : () -> (vec record {
+    id : text;
+    title : text;
+    description : text;
+    educator_id : principal;
+    sections : vec record {
+      id : text;
+      title : text;
+      content : text;
+      order : nat32;
+    };
+    created_at : nat64;
+    updated_at : nat64;
+    published : bool;
+    token_reward : nat64;
+  });
+
+  get_educator_courses : () -> (vec record {
+    id : text;
+    title : text;
+    description : text;
+    educator_id : principal;
+    sections : vec record {
+      id : text;
+      title : text;
+      content : text;
+      order : nat32;
+    };
+    created_at : nat64;
+    updated_at : nat64;
+    published : bool;
+    token_reward : nat64;
+  });
+};

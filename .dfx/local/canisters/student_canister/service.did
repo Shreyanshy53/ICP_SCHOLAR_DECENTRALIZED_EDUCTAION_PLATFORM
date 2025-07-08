@@ -1,0 +1,73 @@
+service : {
+  create_student_profile : (text, text, text) -> (variant { ok : record {
+    User_principal : principal;
+    name : text;
+    email : text;
+    bio : text;
+    created_at : nat64;
+    updated_at : nat64;
+  }; err : text });
+
+  get_student_profile : (opt principal) -> (variant { ok : record {
+    User_principal : principal;
+    name : text;
+    email : text;
+    bio : text;
+    created_at : nat64;
+    updated_at : nat64;
+  }; err : text });
+
+  update_student_profile : (opt text, opt text, opt text) -> (variant { ok : record {
+    User_principal : principal;
+    name : text;
+    email : text;
+    bio : text;
+    created_at : nat64;
+    updated_at : nat64;
+  }; err : text });
+
+  enroll_in_course : (text) -> (variant { ok : record {
+    student_id : principal;
+    course_id : text;
+    enrolled_at : nat64;
+    progress : vec text;
+    completed : bool;
+    completed_at : opt nat64;
+  }; err : text });
+
+  mark_section_complete : (text, text) -> (variant { ok : record {
+    student_id : principal;
+    course_id : text;
+    enrolled_at : nat64;
+    progress : vec text;
+    completed : bool;
+    completed_at : opt nat64;
+  }; err : text });
+
+  complete_course : (text, text) -> (variant { ok : record {
+    student_id : principal;
+    course_id : text;
+    student_name : text;
+    course_title : text;
+    completion_date : nat64;
+    certificate_id : text;
+  }; err : text });
+
+  get_student_enrollments : () -> (vec record {
+    student_id : principal;
+    course_id : text;
+    enrolled_at : nat64;
+    progress : vec text;
+    completed : bool;
+    completed_at : opt nat64;
+  });
+
+  get_student_certificates : () -> (vec record {
+    student_id : principal;
+    course_id : text;
+    student_name : text;
+    course_title : text;
+    completion_date : nat64;
+    certificate_id : text;
+  });
+};

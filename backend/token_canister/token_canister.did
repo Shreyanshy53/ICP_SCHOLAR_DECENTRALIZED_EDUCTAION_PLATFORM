@@ -1,0 +1,67 @@
+service : {
+  mint_tokens : (principal, nat64, text) -> (variant {
+    ok : record {
+      id : text;
+      from : principal;
+      to : principal;
+      amount : nat64;
+      transaction_type : variant { Mint; Transfer; CourseReward; PeerTip };
+      timestamp : nat64;
+      memo : text;
+    };
+    err : text;
+  });
+
+  transfer_tokens : (principal, nat64, text) -> (variant {
+    ok : record {
+      id : text;
+      from : principal;
+      to : principal;
+      amount : nat64;
+      transaction_type : variant { Mint; Transfer; CourseReward; PeerTip };
+      timestamp : nat64;
+      memo : text;
+    };
+    err : text;
+  });
+
+  reward_course_completion : (principal, nat64, text) -> (variant {
+    ok : record {
+      id : text;
+      from : principal;
+      to : principal;
+      amount : nat64;
+      transaction_type : variant { Mint; Transfer; CourseReward; PeerTip };
+      timestamp : nat64;
+      memo : text;
+    };
+    err : text;
+  });
+
+  tip_peer : (principal, nat64, text) -> (variant {
+    ok : record {
+      id : text;
+      from : principal;
+      to : principal;
+      amount : nat64;
+      transaction_type : variant { Mint; Transfer; CourseReward; PeerTip };
+      timestamp : nat64;
+      memo : text;
+    };
+    err : text;
+  });
+
+  get_balance : (opt principal) -> (nat64);
+
+  get_transaction_history : (opt principal) -> (vec record {
+    id : text;
+    from : principal;
+    to : principal;
+    amount : nat64;
+    transaction_type : variant { Mint; Transfer; CourseReward; PeerTip };
+    timestamp : nat64;
+    memo : text;
+  });
+
+  get_total_supply : () -> (nat64);
+};

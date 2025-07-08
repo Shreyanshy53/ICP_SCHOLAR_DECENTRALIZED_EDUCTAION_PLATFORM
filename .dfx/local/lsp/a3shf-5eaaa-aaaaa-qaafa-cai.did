@@ -1,0 +1,15 @@
+service : {
+  post_note : (text, text) -> ();
+
+  tip_peer : (principal, nat64) -> (variant {
+    ok : text;
+    err : text;
+  });
+
+  get_notes : (text) -> (vec record {
+    id : text;
+    content : text;
+    author : principal;
+    posted_at : nat64;
+  });
+};

@@ -1,0 +1,7 @@
+[workspace]
+members = [
+  "backend/student_canister",
+  "backend/course_canister",
+  "backend/token_canister",
+  "backend/peer_canister"
+]

@@ -1,0 +1,43 @@
+{
+  "canisters": {
+    "student_canister": {
+      "type": "rust",
+      "package": "student_canister",
+      "main": "backend/student_canister/src/lib.rs",
+      "candid": "backend/student_canister/student_canister.did"
+    },
+    "course_canister": {
+      "type": "rust",
+      "package": "course_canister",
+      "main": "backend/course_canister/src/lib.rs",
+      "candid": "backend/course_canister/course_canister.did"
+    },
+    "token_canister": {
+      "type": "rust",
+      "package": "token_canister",
+      "main": "backend/token_canister/src/lib.rs",
+      "candid": "backend/token_canister/token_canister.did"
+    },
+    "peer_canister": {
+      "type": "rust",
+      "package": "peer_canister",
+      "main": "backend/peer_canister/src/lib.rs",
+      "candid": "backend/peer_canister/peer_canister.did"
+    },
+    "frontend": {
+      "type": "assets",
+      "source": ["dist"],
+      "build": "npm run build",
+      "frontend": {
+        "entrypoint": "index.html"
+      }
+    }
+  },
+  "defaults": {
+    "build": {
+      "packtool": "cargo"
+    }
+  },
+  "output_env_file": ".env",
+  "version": 1
+}
