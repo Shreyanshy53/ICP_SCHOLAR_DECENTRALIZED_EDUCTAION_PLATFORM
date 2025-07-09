@@ -39,8 +39,8 @@ const PeerExchange: React.FC = () => {
       try {
         setIsLoading(true);
         if (agentService.peer) {
-          // For now, we'll fetch all notes - in a real app, you'd filter by course
-          const notesData = await agentService.peer.get_user_notes();
+          // Fetch all notes from shared storage
+          const notesData = await agentService.peer.get_all_notes();
           setNotes(notesData);
         }
       } catch (error) {
@@ -53,6 +53,17 @@ const PeerExchange: React.FC = () => {
 
     if (isAuthenticated) {
       fetchNotes();
+      
+      // Listen for global data updates
+      const handleGlobalUpdate = () => {
+        fetchNotes();
+      };
+      
+      window.addEventListener('globalDataUpdate', handleGlobalUpdate);
+      
+      return () => {
+        window.removeEventListener('globalDataUpdate', handleGlobalUpdate);
+      };
     }
   }, [isAuthenticated]);
 
@@ -71,8 +82,8 @@ const PeerExchange: React.FC = () => {
         toast.success('Note created successfully!');
         setShowCreateModal(false);
         setNewNote({ course_id: '', content: '', note_type: 'Study Note' });
-        // Refresh notes
-        const notesData = await agentService.peer.get_user_notes();
+        // Refresh all notes
+        const notesData = await agentService.peer.get_all_notes();
         setNotes(notesData);
       }
     } catch (error) {
@@ -86,8 +97,8 @@ const PeerExchange: React.FC = () => {
       if (agentService.peer) {
         await agentService.peer.tip_peer_note(noteId, amount, 'Great contribution!');
         toast.success('Tip sent successfully!');
-        // Refresh notes
-        const notesData = await agentService.peer.get_user_notes();
+        // Refresh all notes to show updated tip count
+        const notesData = await agentService.peer.get_all_notes();
         setNotes(notesData);
       }
     } catch (error) {

@@ -101,6 +101,17 @@ const EducatorDashboard: React.FC = () => {
     };
 
     fetchEducatorData();
+    
+    // Listen for global data updates
+    const handleGlobalUpdate = () => {
+      fetchEducatorData();
+    };
+    
+    window.addEventListener('globalDataUpdate', handleGlobalUpdate);
+    
+    return () => {
+      window.removeEventListener('globalDataUpdate', handleGlobalUpdate);
+    };
   }, [isAuthenticated]);
 
   const handleCreateProfile = async (e: React.FormEvent) => {

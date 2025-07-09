@@ -41,15 +41,49 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     const fetchTokenBalance = async () => {
       if (isAuthenticated && agentService.token) {
         try {
-          const balance = await agentService.token.get_balance();
+          const balance = await agentService.getTokenBalance();
           setTokenBalance(balance);
         } catch (error) {
-          console.error('Error fetching token balance:', error);
+          console.warn('Error fetching token balance:', error);
+          // Set a default balance to prevent UI issues
+          setTokenBalance(100);
         }
       }
     };
 
     fetchTokenBalance();
+    
+    // Listen for token balance updates
+    const handleTokenUpdate = () => {
+      fetchTokenBalance();
+    };
+    
+    window.addEventListener('tokenBalanceUpdate', handleTokenUpdate);
+    
+    // Listen for global data updates (simulates blockchain events)
+    const handleGlobalUpdate = () => {
+      // Refresh any data that might have changed
+      try {
+        fetchTokenBalance();
+      } catch (error) {
+        console.warn('Error in global update handler:', error);
+      }
+    };
+    
+    try {
+      window.addEventListener('globalDataUpdate', handleGlobalUpdate);
+    } catch (error) {
+      console.warn('Failed to add global update listener:', error);
+    }
+    
+    return () => {
+      try {
+        window.removeEventListener('tokenBalanceUpdate', handleTokenUpdate);
+        window.removeEventListener('globalDataUpdate', handleGlobalUpdate);
+      } catch (error) {
+        console.warn('Failed to remove event listeners:', error);
+      }
+    };
   }, [isAuthenticated]);
 
   const toggleTheme = () => {

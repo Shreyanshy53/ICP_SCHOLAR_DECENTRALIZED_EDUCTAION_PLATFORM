@@ -152,30 +152,27 @@ const CourseDetail: React.FC = () => {
     if (!course || !courseId || !userProfile) return;
 
     try {
-      if (agentService.student) {
-        const certificate = await agentService.student.complete_course(courseId, course.title);
-        
-        // Update enrollment status
-        setEnrollment(prev => prev ? {
-          ...prev,
-          completed: true,
-          completed_at: Date.now() * 1000000
-        } : null);
-        
-        // Award tokens
-        if (agentService.token) {
-          await agentService.token.reward_course_completion(
-            agentService.getPrincipal()?.toText() || '',
-            course.token_reward,
-            courseId
-          );
-        }
-        
-        toast.success(`🎉 Congratulations! You've completed the course and earned ${course.token_reward} tokens!`);
-        
-        // Generate certificate
-        generateCertificate(certificate);
-      }
+      // Use the enhanced completion method that handles both course completion and token rewards
+      const certificate = await agentService.completeCourseWithRewards(
+        courseId,
+        course.title,
+        course.token_reward
+      );
+      
+      // Update enrollment status
+      setEnrollment(prev => prev ? {
+        ...prev,
+        completed: true,
+        completed_at: Date.now() * 1000000
+      } : null);
+      
+      toast.success(`🎉 Congratulations! You've completed the course and earned ${course.token_reward} tokens!`);
+      
+      // Generate certificate
+      generateCertificate(certificate);
+      
+      // Trigger a token balance refresh in the parent component
+      window.dispatchEvent(new CustomEvent('tokenBalanceUpdate'));
     } catch (error) {
       console.error('Error completing course:', error);
       toast.error('Failed to complete course');

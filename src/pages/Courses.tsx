@@ -41,6 +41,7 @@ const Courses: React.FC = () => {
       try {
         setIsLoading(true);
         if (agentService.course) {
+          // Fetch all published courses from shared storage
           const coursesData = await agentService.course.get_published_courses();
           setCourses(coursesData);
           setFilteredCourses(coursesData);
@@ -54,6 +55,17 @@ const Courses: React.FC = () => {
     };
 
     fetchCourses();
+    
+    // Listen for global data updates
+    const handleGlobalUpdate = () => {
+      fetchCourses();
+    };
+    
+    window.addEventListener('globalDataUpdate', handleGlobalUpdate);
+    
+    return () => {
+      window.removeEventListener('globalDataUpdate', handleGlobalUpdate);
+    };
   }, []);
 
   useEffect(() => {

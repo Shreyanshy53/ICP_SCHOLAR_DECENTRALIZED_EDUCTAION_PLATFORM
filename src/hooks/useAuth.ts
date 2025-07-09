@@ -17,7 +17,12 @@ export const useAuth = () => {
 
   useEffect(() => {
     const initAuth = async () => {
-      await agentService.init();
+      try {
+        await agentService.init();
+      } catch (error) {
+        console.warn('Agent service initialization failed:', error);
+      }
+      
       const isAuthenticated = agentService.isAuthenticated();
       const principal = agentService.getPrincipal();
       

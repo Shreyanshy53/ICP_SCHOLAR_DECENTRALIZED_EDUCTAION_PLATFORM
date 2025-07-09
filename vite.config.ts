@@ -1,17 +1,28 @@
-import { defineConfig, loadEnv } from 'vite';
+import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-export default defineConfig(({ mode }) => {
-  // Load env variables based on mode (development, production)
-  const env = loadEnv(mode, process.cwd());
-
-  return {
-    plugins: [react()],
-    define: {
-      'process.env': env,  // <- Important for accessing .env values
+// https://vitejs.dev/config/
+export default defineConfig({
+  plugins: [react()],
+  server: {
+    port: 5173,
+    host: true,
+    strictPort: false,
+  },
+  optimizeDeps: {
+    exclude: ['lucide-react'],
+    include: ['react', 'react-dom'],
+  },
+  build: {
+    sourcemap: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          router: ['react-router-dom'],
+          ui: ['framer-motion', 'react-hot-toast'],
+        },
+      },
     },
-    optimizeDeps: {
-      exclude: ['lucide-react'],
-    },
-  };
+  },
 });
