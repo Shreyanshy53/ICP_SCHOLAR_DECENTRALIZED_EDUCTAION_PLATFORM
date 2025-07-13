@@ -10,11 +10,7 @@ import { canisterId as courseCanisterId, idlFactory as courseIdlFactory } from '
 import { canisterId as tokenCanisterId, idlFactory as tokenIdlFactory } from '../declarations/token_canister';
 import { canisterId as peerCanisterId, idlFactory as peerIdlFactory } from '../declarations/peer_canister';
 
-// Detect if we're running through a canister URL
-const isCanisterUrl = window.location.search.includes('canisterId=');
-const host = import.meta.env.VITE_DFX_NETWORK === 'local' 
-  ? (isCanisterUrl ? window.location.origin : 'http://localhost:4943')
-  : 'https://ic0.app';
+const host = 'https://ic0.app'; // Always use production host for deployed app
 
 class AgentService {
   private agent: HttpAgent | null = null;
@@ -31,11 +27,9 @@ class AgentService {
         idleOptions: {
           disableIdle: true,
           disableDefaultIdleCallback: true
-        },
-        keyType: 'Ed25519'
+        }
       });
     } catch (error) {
-      console.warn('AuthClient creation failed, using fallback:', error);
       // Create a mock auth client for development
       this.authClient = {
         getIdentity: () => ({
@@ -59,19 +53,8 @@ class AgentService {
       this.agent = new HttpAgent({
         host,
         identity: this.identity,
-        retryTimes: 3,
-        verifyQuerySignatures: false
       });
-
-      if (import.meta.env.VITE_DFX_NETWORK === 'local') {
-        try {
-          await this.agent.fetchRootKey();
-        } catch (rootKeyError) {
-          console.warn('Failed to fetch root key, continuing without it:', rootKeyError);
-        }
-      }
     } catch (error) {
-      console.warn('HttpAgent creation failed, using mock agent:', error);
       this.agent = null;
     }
 
@@ -172,58 +155,6 @@ class AgentService {
       }
     };
 
-    this.peerActor = {
-      create_peer_note: async (course_id: string, author_name: string, content: string, note_type: any) => {
-        const note = {
-          id: Math.random().toString(36).substr(2, 9),
-          course_id,
-          author: this.identity?.getPrincipal().toText() || 'mock-author',
-          author_name,
-          content,
-          note_type: Object.keys(note_type)[0],
-          created_at: Date.now() * 1000000,
-          updated_at: Date.now() * 1000000,
-          tips_received: 0
-        };
-        
-        // Store in shared storage
-        sharedStorage.addPeerNote(note);
-        
-        return note;
-      },
-      get_user_notes: async () => {
-        const principal = this.identity?.getPrincipal().toText() || 'mock-principal';
-        return sharedStorage.getUserNotes(principal);
-      },
-      get_course_notes: async (course_id: string) => {
-        return sharedStorage.getCourseNotes(course_id);
-      },
-      get_all_notes: async () => {
-        return sharedStorage.getPeerNotes();
-      },
-      tip_peer_note: async (note_id: string, amount: number, message: string) => {
-        // Find and update the note
-        const notes = sharedStorage.getPeerNotes();
-        const note = notes.find((n: any) => n.id === note_id);
-        
-        if (note) {
-          sharedStorage.updatePeerNote(note_id, {
-            tips_received: note.tips_received + amount
-          });
-        }
-        
-        return {
-          id: Math.random().toString(36).substr(2, 9),
-          note_id,
-          tipper: this.identity?.getPrincipal().toText() || 'mock-tipper',
-          recipient: note?.author || 'mock-recipient',
-          amount,
-          timestamp: Date.now() * 1000000,
-          message
-        };
-      }
-    };
-
     this.courseActor = {
       create_educator_profile: async (name: string, bio: string, expertise: string[]) => {
         const profile = {
@@ -267,14 +198,12 @@ class AgentService {
         return sharedStorage.getEducatorCourses(principal);
       },
       get_published_courses: async () => {
-        const publishedUserCourses = sharedStorage.getPublishedCourses();
-        
         // Default courses that are always available
         const defaultCourses = [
             {
               id: "course1",
               title: "Introduction to Blockchain",
-              description: "Master the fundamentals of blockchain technology, cryptocurrency, and distributed systems. This comprehensive course covers everything from basic concepts to advanced implementations.",
+              description: "Master the fundamentals of blockchain technology, cryptocurrency, and distributed systems. Learn from IIT Bombay's top professors.",
               educator_id: "prof-rajesh-kumar",
               educator_name: "Prof. Rajesh Kumar",
               institution: "IIT Bombay - Computer Science & Engineering",
@@ -532,50 +461,60 @@ Understanding these fundamentals is crucial before diving into actual smart cont
 
 Solidity is a statically-typed programming language designed for developing smart contracts on Ethereum.
 
-### Contract Structure
+### Basic Syntax:
 
 \`\`\`solidity
-// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-contract MyContract {
-    // State variables
-    uint256 public myNumber;
-    address public owner;
+contract HelloWorld {
+    string public message;
     
-    // Events
-    event NumberChanged(uint256 newNumber);
-    
-    // Constructor
-    constructor() {
-        owner = msg.sender;
-        myNumber = 0;
+    constructor(string memory _message) {
+        message = _message;
     }
     
-    // Functions
-    function setNumber(uint256 _number) public {
-        require(msg.sender == owner, "Only owner can set number");
-        myNumber = _number;
-        emit NumberChanged(_number);
+    function updateMessage(string memory _newMessage) public {
+        message = _newMessage;
     }
 }
 \`\`\`
 
-### Data Types
+### Data Types:
 
-#### Value Types
-- **bool**: true or false
-- **int/uint**: Signed/unsigned integers (8 to 256 bits)
-- **address**: 20-byte Ethereum address
-- **bytes**: Fixed-size byte arrays (bytes1 to bytes32)
-- **string**: Dynamic UTF-8 encoded string
+- **Boolean**: \`bool\`
+- **Integers**: \`uint256\`, \`int256\`
+- **Address**: \`address\`
+- **Bytes**: \`bytes32\`
+- **String**: \`string\`
+- **Arrays**: \`uint[]\`
+- **Mappings**: \`mapping(address => uint)\`
 
-#### Reference Types
-- **arrays**: Dynamic or fixed-size arrays
-- **mapping**: Hash tables (key-value pairs)
-- **struct**: Custom data structures
+### Functions and Visibility:
 
-Mastering Solidity is essential for building secure and efficient smart contracts.`,
+- **public**: Accessible from anywhere
+- **private**: Only within the contract
+- **internal**: Within contract and derived contracts
+- **external**: Only from outside the contract
+
+### State Variables:
+
+Variables stored permanently on the blockchain.
+
+\`\`\`solidity
+contract Storage {
+    uint256 public storedData;
+    
+    function set(uint256 x) public {
+        storedData = x;
+    }
+    
+    function get() public view returns (uint256) {
+        return storedData;
+    }
+}
+\`\`\`
+
+Understanding these fundamentals is essential for smart contract development.`,
                   order: 1
                 }
               ],
@@ -583,29 +522,752 @@ Mastering Solidity is essential for building secure and efficient smart contract
               updated_at: Date.now() * 1000000,
               published: true,
               token_reward: 75
+            },
+            {
+              id: "course3",
+              title: "DeFi Protocols & Yield Farming",
+              description: "Deep dive into Decentralized Finance protocols, liquidity mining, and yield farming strategies. Learn to build and analyze DeFi applications.",
+              educator_id: "prof-arjun-menon",
+              educator_name: "Prof. Arjun Menon",
+              institution: "IIT Madras - Financial Technology",
+              difficulty: "Advanced",
+              duration: "10 weeks",
+              rating: 4.9,
+              enrolled_count: 634,
+              sections: [
+                {
+                  id: "defi-intro",
+                  title: "Introduction to DeFi",
+                  content: `Welcome to the world of Decentralized Finance!
+
+## What is DeFi?
+
+Decentralized Finance (DeFi) represents a paradigm shift from traditional, centralized financial systems to peer-to-peer finance enabled by decentralized technologies built on blockchain networks.
+
+### Core Principles of DeFi:
+
+1. **Permissionless**: Anyone can access DeFi protocols without approval
+2. **Transparent**: All transactions are visible on the blockchain
+3. **Programmable**: Smart contracts automate financial operations
+4. **Composable**: DeFi protocols can be combined like "money legos"
+5. **Global**: Accessible 24/7 from anywhere in the world
+
+### Key DeFi Categories:
+
+- **Lending & Borrowing**: Aave, Compound, MakerDAO
+- **Decentralized Exchanges**: Uniswap, SushiSwap, Curve
+- **Derivatives**: Synthetix, dYdX, Perpetual Protocol
+- **Insurance**: Nexus Mutual, Cover Protocol
+- **Asset Management**: Yearn Finance, Balancer
+
+### Total Value Locked (TVL)
+
+TVL represents the total amount of assets locked in DeFi protocols. As of 2024, the DeFi ecosystem has grown to over $100 billion in TVL, demonstrating massive adoption and trust in these protocols.
+
+### Benefits of DeFi:
+
+- **Higher Yields**: Often better returns than traditional finance
+- **24/7 Access**: Markets never close
+- **No Intermediaries**: Direct peer-to-peer transactions
+- **Innovation**: Rapid development of new financial products
+- **Financial Inclusion**: Access for the unbanked
+
+### Risks to Consider:
+
+- **Smart Contract Risk**: Code vulnerabilities
+- **Impermanent Loss**: For liquidity providers
+- **Regulatory Uncertainty**: Evolving legal landscape
+- **Market Volatility**: High price fluctuations
+
+In the next section, we'll explore automated market makers and how they revolutionize trading.`,
+                  order: 0
+                },
+                {
+                  id: "amm-protocols",
+                  title: "Automated Market Makers (AMMs)",
+                  content: `Understanding the revolutionary trading mechanism that powers DeFi.
+
+## Automated Market Makers Explained
+
+AMMs are smart contracts that create liquidity pools for trading cryptocurrencies without traditional order books. Instead of matching buyers and sellers, AMMs use mathematical formulas to price assets.
+
+### How AMMs Work:
+
+1. **Liquidity Pools**: Users deposit token pairs (e.g., ETH/USDC)
+2. **Constant Product Formula**: x * y = k (Uniswap V2)
+3. **Price Discovery**: Prices adjust based on pool ratios
+4. **Arbitrage**: Keeps prices aligned with external markets
+
+### Popular AMM Protocols:
+
+**Uniswap V3**
+- Concentrated liquidity
+- Capital efficiency improvements
+- Fee tiers (0.05%, 0.3%, 1%)
+
+**Curve Finance**
+- Optimized for stablecoin trading
+- Low slippage for similar assets
+- Governance token (CRV) rewards
+
+**Balancer**
+- Multi-token pools (up to 8 tokens)
+- Weighted pools and stable pools
+- Programmable liquidity
+
+### Liquidity Provider Economics:
+
+**Rewards:**
+- Trading fees (typically 0.3%)
+- Liquidity mining rewards
+- Governance token incentives
+
+**Risks:**
+- Impermanent loss
+- Smart contract risk
+- Token price volatility
+
+### Impermanent Loss Calculation:
+
+When you provide liquidity to a 50/50 pool and one token appreciates significantly, you experience impermanent loss compared to just holding the tokens.
+
+Formula: IL = 2 * sqrt(price_ratio) / (1 + price_ratio) - 1
+
+Understanding AMMs is crucial for participating in DeFi yield farming strategies.`,
+                  order: 1
+                },
+                {
+                  id: "yield-farming",
+                  title: "Yield Farming Strategies",
+                  content: `Master advanced yield farming techniques and risk management.
+
+## Yield Farming Fundamentals
+
+Yield farming involves strategically moving crypto assets between different DeFi protocols to maximize returns. It's like being a farmer, but instead of crops, you're harvesting yield from your crypto assets.
+
+### Basic Yield Farming Strategies:
+
+**1. Liquidity Mining**
+- Provide liquidity to DEX pools
+- Earn trading fees + governance tokens
+- Example: Provide ETH/USDC on Uniswap, earn UNI tokens
+
+**2. Lending & Borrowing**
+- Lend assets on Aave/Compound
+- Borrow against collateral
+- Farm governance tokens (AAVE, COMP)
+
+**3. Staking Derivatives**
+- Stake ETH for stETH (Lido)
+- Use stETH as collateral
+- Maintain ETH exposure while earning yield
+
+### Advanced Strategies:
+
+**Leveraged Yield Farming**
+1. Deposit USDC as collateral
+2. Borrow more USDC (up to 75% LTV)
+3. Provide liquidity with borrowed funds
+4. Amplify rewards but increase risk
+
+**Delta-Neutral Farming**
+1. Long spot position
+2. Short perpetual futures
+3. Earn yield while hedging price risk
+4. Focus purely on farming rewards
+
+**Convex Strategy (for Curve)**
+1. Deposit LP tokens in Convex
+2. Earn boosted CRV rewards
+3. Receive CVX tokens as bonus
+4. Compound rewards automatically
+
+### Risk Management:
+
+**Position Sizing**
+- Never risk more than you can afford to lose
+- Diversify across multiple protocols
+- Start small and scale gradually
+
+**Smart Contract Audits**
+- Check protocol audit history
+- Understand code risks
+- Monitor TVL and usage metrics
+
+**Liquidation Management**
+- Maintain healthy collateral ratios
+- Set up monitoring alerts
+- Have exit strategies ready
+
+### Yield Farming Tools:
+
+- **DeFi Pulse**: Track protocol TVL
+- **Zapper**: Portfolio management
+- **DeBank**: Yield tracking
+- **APY.vision**: Impermanent loss tracking
+
+Remember: High yields often come with high risks. Always DYOR (Do Your Own Research)!`,
+                  order: 2
+                }
+              ],
+              created_at: Date.now() * 1000000,
+              updated_at: Date.now() * 1000000,
+              published: true,
+              token_reward: 100
+            },
+            {
+              id: "course4",
+              title: "NFT Development & Marketplace Creation",
+              description: "Learn to create, deploy, and trade NFTs. Build your own NFT marketplace from scratch using modern Web3 technologies.",
+              educator_id: "dr-vikram-singh",
+              educator_name: "Dr. Vikram Singh",
+              institution: "IIT Kanpur - Digital Arts & Technology",
+              difficulty: "Intermediate",
+              duration: "7 weeks",
+              rating: 4.7,
+              enrolled_count: 789,
+              sections: [
+                {
+                  id: "nft-fundamentals",
+                  title: "NFT Fundamentals & Standards",
+                  content: `Understanding Non-Fungible Tokens and their revolutionary impact.
+
+## What are NFTs?
+
+Non-Fungible Tokens (NFTs) are unique digital assets that represent ownership of specific items or content on the blockchain. Unlike cryptocurrencies, each NFT is distinct and cannot be exchanged on a one-to-one basis.
+
+### Key Characteristics:
+
+1. **Uniqueness**: Each NFT has a unique identifier
+2. **Indivisibility**: Cannot be divided into smaller units
+3. **Ownership**: Verifiable ownership on blockchain
+4. **Transferability**: Can be bought, sold, and traded
+5. **Programmability**: Smart contract functionality
+
+### NFT Standards:
+
+**ERC-721 (Ethereum)**
+- First NFT standard
+- One token per contract call
+- Individual ownership tracking
+- Used by CryptoPunks, Bored Apes
+
+**ERC-1155 (Multi-Token)**
+- Batch operations
+- Fungible and non-fungible in one contract
+- Gas efficient for gaming
+- Used by OpenSea, Enjin
+
+**ERC-998 (Composable)**
+- NFTs that own other NFTs
+- Hierarchical ownership
+- Complex digital assets
+
+### NFT Use Cases:
+
+**Digital Art**
+- Unique artwork ownership
+- Artist royalties on resales
+- Provenance tracking
+
+**Gaming**
+- In-game items and characters
+- Cross-game compatibility
+- Player-owned economies
+
+**Music & Entertainment**
+- Album releases
+- Concert tickets
+- Fan engagement
+
+**Real Estate**
+- Virtual land ownership
+- Property documentation
+- Fractional ownership
+
+**Identity & Credentials**
+- Digital certificates
+- Academic degrees
+- Professional licenses
+
+### NFT Metadata Structure:
+
+\`\`\`json
+{
+  "name": "My Awesome NFT",
+  "description": "This is a unique digital artwork",
+  "image": "https://ipfs.io/ipfs/QmHash...",
+  "attributes": [
+    {
+      "trait_type": "Color",
+      "value": "Blue"
+    },
+    {
+      "trait_type": "Rarity",
+      "value": "Legendary"
+    }
+  ]
+}
+\`\`\`
+
+Understanding these fundamentals is crucial before diving into NFT development and marketplace creation.`,
+                  order: 0
+                },
+                {
+                  id: "nft-smart-contracts",
+                  title: "Creating NFT Smart Contracts",
+                  content: `Learn to develop and deploy your own NFT smart contracts.
+
+## NFT Smart Contract Development
+
+Creating NFT smart contracts involves understanding the ERC-721 standard and implementing the required functions for minting, transferring, and managing tokens.
+
+### Basic ERC-721 Implementation:
+
+\`\`\`solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/Counters.sol";
+
+contract MyNFT is ERC721, Ownable {
+    using Counters for Counters.Counter;
+    Counters.Counter private _tokenIds;
+    
+    mapping(uint256 => string) private _tokenURIs;
+    
+    constructor() ERC721("MyNFT", "MNFT") {}
+    
+    function mintNFT(address recipient, string memory tokenURI)
+        public onlyOwner returns (uint256)
+    {
+        _tokenIds.increment();
+        uint256 newItemId = _tokenIds.current();
+        _mint(recipient, newItemId);
+        _setTokenURI(newItemId, tokenURI);
+        return newItemId;
+    }
+    
+    function _setTokenURI(uint256 tokenId, string memory _tokenURI)
+        internal virtual
+    {
+        require(_exists(tokenId), "URI set of nonexistent token");
+        _tokenURIs[tokenId] = _tokenURI;
+    }
+    
+    function tokenURI(uint256 tokenId)
+        public view virtual override returns (string memory)
+    {
+        require(_exists(tokenId), "URI query for nonexistent token");
+        return _tokenURIs[tokenId];
+    }
+}
+\`\`\`
+
+### Advanced Features:
+
+**Royalties (EIP-2981)**
+\`\`\`solidity
+function royaltyInfo(uint256 tokenId, uint256 salePrice)
+    external view returns (address receiver, uint256 royaltyAmount)
+{
+    return (owner(), (salePrice * 250) / 10000); // 2.5% royalty
+}
+\`\`\`
+
+**Batch Minting**
+\`\`\`solidity
+function batchMint(address[] memory recipients, string[] memory tokenURIs)
+    public onlyOwner
+{
+    require(recipients.length == tokenURIs.length, "Arrays length mismatch");
+    
+    for (uint256 i = 0; i < recipients.length; i++) {
+        mintNFT(recipients[i], tokenURIs[i]);
+    }
+}
+\`\`\`
+
+**Reveal Mechanism**
+\`\`\`solidity
+bool public revealed = false;
+string public notRevealedUri;
+
+function reveal() public onlyOwner {
+    revealed = true;
+}
+
+function tokenURI(uint256 tokenId) public view virtual override returns (string memory) {
+    if (!revealed) {
+        return notRevealedUri;
+    }
+    return _tokenURIs[tokenId];
+}
+\`\`\`
+
+### Gas Optimization Tips:
+
+1. **Use ERC721A for batch minting**
+2. **Pack struct variables efficiently**
+3. **Use events for off-chain data**
+4. **Implement lazy minting**
+5. **Consider Layer 2 solutions**
+
+### Testing Your Contract:
+
+\`\`\`javascript
+const { expect } = require("chai");
+
+describe("MyNFT", function () {
+  it("Should mint and assign token to owner", async function () {
+    const [owner] = await ethers.getSigners();
+    const MyNFT = await ethers.getContractFactory("MyNFT");
+    const myNFT = await MyNFT.deploy();
+    
+    await myNFT.mintNFT(owner.address, "https://example.com/token/1");
+    expect(await myNFT.ownerOf(1)).to.equal(owner.address);
+  });
+});
+\`\`\`
+
+Next, we'll learn how to build a complete NFT marketplace!`,
+                  order: 1
+                }
+              ],
+              created_at: Date.now() * 1000000,
+              updated_at: Date.now() * 1000000,
+              published: true,
+              token_reward: 85
+            },
+            {
+              id: "course5",
+              title: "Web3 Security & Smart Contract Auditing",
+              description: "Master blockchain security principles and learn to audit smart contracts. Understand common vulnerabilities and how to prevent them.",
+              educator_id: "prof-anita-desai",
+              educator_name: "Prof. Anita Desai",
+              institution: "IIT Guwahati - Cybersecurity",
+              difficulty: "Advanced",
+              duration: "12 weeks",
+              rating: 4.9,
+              enrolled_count: 456,
+              sections: [
+                {
+                  id: "security-fundamentals",
+                  title: "Blockchain Security Fundamentals",
+                  content: `Understanding the security landscape in blockchain and Web3.
+
+## Web3 Security Overview
+
+Blockchain security involves multiple layers, from the underlying protocol to smart contracts and user interfaces. Understanding these layers is crucial for building secure decentralized applications.
+
+### Security Layers:
+
+1. **Protocol Layer**: Consensus mechanisms, network security
+2. **Smart Contract Layer**: Code vulnerabilities, logic flaws
+3. **Application Layer**: Frontend security, wallet integration
+4. **User Layer**: Private key management, social engineering
+
+### Common Attack Vectors:
+
+**Smart Contract Vulnerabilities**
+- Reentrancy attacks
+- Integer overflow/underflow
+- Access control issues
+- Front-running
+- Flash loan attacks
+
+**Protocol Attacks**
+- 51% attacks
+- Eclipse attacks
+- Sybil attacks
+- Long-range attacks
+
+**Application Attacks**
+- Cross-site scripting (XSS)
+- Man-in-the-middle attacks
+- Phishing attacks
+- Fake DApps
+
+### The DAO Hack (2016)
+
+The most famous smart contract exploit that led to Ethereum's hard fork:
+
+**Vulnerability**: Reentrancy in the withdrawal function
+**Impact**: $60 million drained
+**Lesson**: Always follow checks-effects-interactions pattern
+
+\`\`\`solidity
+// Vulnerable code
+function withdraw(uint amount) public {
+    require(balances[msg.sender] >= amount);
+    msg.sender.call.value(amount)(); // External call before state change
+    balances[msg.sender] -= amount; // State change after external call
+}
+
+// Secure code
+function withdraw(uint amount) public {
+    require(balances[msg.sender] >= amount);
+    balances[msg.sender] -= amount; // State change first
+    msg.sender.call.value(amount)(); // External call last
+}
+\`\`\`
+
+### Security Best Practices:
+
+**Development**
+- Use established libraries (OpenZeppelin)
+- Follow security patterns
+- Implement proper access controls
+- Use reentrancy guards
+
+**Testing**
+- Comprehensive unit tests
+- Integration testing
+- Fuzzing and property testing
+- Formal verification
+
+**Deployment**
+- Professional audits
+- Bug bounty programs
+- Gradual rollouts
+- Emergency pause mechanisms
+
+### Security Tools:
+
+**Static Analysis**
+- Slither
+- Mythril
+- Securify
+- SmartCheck
+
+**Dynamic Analysis**
+- Echidna (fuzzing)
+- Manticore (symbolic execution)
+- Scribble (runtime verification)
+
+**Formal Verification**
+- Certora
+- KEVM
+- Dafny
+
+Security is not optional in Web3 - it's fundamental to building trust and protecting user funds.`,
+                  order: 0
+                },
+                {
+                  id: "common-vulnerabilities",
+                  title: "Common Smart Contract Vulnerabilities",
+                  content: `Deep dive into the most common smart contract vulnerabilities and how to prevent them.
+
+## Top 10 Smart Contract Vulnerabilities
+
+Understanding these vulnerabilities is crucial for any smart contract developer or auditor.
+
+### 1. Reentrancy
+
+**Description**: External calls can call back into the contract before the first execution is complete.
+
+**Example**:
+\`\`\`solidity
+// Vulnerable
+function withdraw() external {
+    uint amount = balances[msg.sender];
+    (bool success,) = msg.sender.call{value: amount}("");
+    require(success);
+    balances[msg.sender] = 0; // Too late!
+}
+
+// Secure
+function withdraw() external nonReentrant {
+    uint amount = balances[msg.sender];
+    balances[msg.sender] = 0; // Update state first
+    (bool success,) = msg.sender.call{value: amount}("");
+    require(success);
+}
+\`\`\`
+
+### 2. Integer Overflow/Underflow
+
+**Description**: Arithmetic operations that exceed variable limits.
+
+**Example**:
+\`\`\`solidity
+// Vulnerable (Solidity < 0.8.0)
+function add(uint256 a, uint256 b) public pure returns (uint256) {
+    return a + b; // Can overflow
+}
+
+// Secure
+function add(uint256 a, uint256 b) public pure returns (uint256) {
+    uint256 c = a + b;
+    require(c >= a, "Addition overflow");
+    return c;
+}
+
+// Or use SafeMath library
+using SafeMath for uint256;
+function add(uint256 a, uint256 b) public pure returns (uint256) {
+    return a.add(b);
+}
+\`\`\`
+
+### 3. Access Control Issues
+
+**Description**: Functions that should be restricted are accessible to unauthorized users.
+
+**Example**:
+\`\`\`solidity
+// Vulnerable
+function withdraw() public {
+    // Anyone can call this!
+    payable(owner).transfer(address(this).balance);
+}
+
+// Secure
+modifier onlyOwner() {
+    require(msg.sender == owner, "Not the owner");
+    _;
+}
+
+function withdraw() public onlyOwner {
+    payable(owner).transfer(address(this).balance);
+}
+\`\`\`
+
+### 4. Front-Running
+
+**Description**: Miners or bots can see pending transactions and submit their own with higher gas fees.
+
+**Mitigation**:
+- Commit-reveal schemes
+- Batch auctions
+- Private mempools
+- Time delays
+
+### 5. Flash Loan Attacks
+
+**Description**: Exploiting price oracles or governance using borrowed funds within a single transaction.
+
+**Prevention**:
+- Use time-weighted average prices (TWAP)
+- Multiple oracle sources
+- Circuit breakers
+- Governance delays
+
+### 6. Denial of Service (DoS)
+
+**Description**: Making contracts unusable through gas limit attacks or external dependencies.
+
+**Example**:
+\`\`\`solidity
+// Vulnerable - gas limit DoS
+function refundAll() public {
+    for (uint i = 0; i < investors.length; i++) {
+        investors[i].transfer(amounts[i]); // Can run out of gas
+    }
+}
+
+// Secure - pull over push
+function withdraw() public {
+    uint amount = amounts[msg.sender];
+    amounts[msg.sender] = 0;
+    payable(msg.sender).transfer(amount);
+}
+\`\`\`
+
+### 7. Timestamp Dependence
+
+**Description**: Relying on block.timestamp for critical logic.
+
+**Issue**: Miners can manipulate timestamps within ~15 seconds.
+
+**Solution**: Use block numbers or external time sources for critical operations.
+
+### 8. Unchecked External Calls
+
+**Description**: Not checking return values of external calls.
+
+**Example**:
+\`\`\`solidity
+// Vulnerable
+token.transfer(recipient, amount); // Ignores return value
+
+// Secure
+require(token.transfer(recipient, amount), "Transfer failed");
+
+// Or use SafeERC20
+using SafeERC20 for IERC20;
+token.safeTransfer(recipient, amount);
+\`\`\`
+
+### 9. Delegate Call Vulnerabilities
+
+**Description**: Incorrect use of delegatecall can lead to storage collisions.
+
+**Risk**: The called contract executes in the caller's context.
+
+### 10. Randomness Vulnerabilities
+
+**Description**: Using predictable sources for randomness.
+
+**Bad**:
+\`\`\`solidity
+uint random = uint(keccak256(abi.encodePacked(block.timestamp, block.difficulty)));
+\`\`\`
+
+**Better**: Use Chainlink VRF or commit-reveal schemes.
+
+### Audit Checklist:
+
+- [ ] Reentrancy protection
+- [ ] Integer overflow/underflow checks
+- [ ] Access control implementation
+- [ ] External call return value checks
+- [ ] Gas limit considerations
+- [ ] Oracle manipulation resistance
+- [ ] Proper randomness implementation
+- [ ] Emergency pause mechanisms
+- [ ] Upgrade safety (if applicable)
+- [ ] Documentation and comments
+
+Remember: Security is an ongoing process, not a one-time check!`,
+                  order: 1
+                }
+              ],
+              created_at: Date.now() * 1000000,
+              updated_at: Date.now() * 1000000,
+              published: true,
+              token_reward: 120
             }
         ];
         
-        // Combine default courses with all user-created published courses
-        const allPublishedCourses = [...defaultCourses, ...publishedUserCourses];
+        // Get user-created published courses from shared storage
+        const userCreatedCourses = sharedStorage.getPublishedCourses();
         
-        // Remove duplicates based on course ID
-        const uniqueCourses = allPublishedCourses.filter((course, index, self) =>
-          index === self.findIndex((c) => c.id === course.id)
-        );
+        // Combine default courses with user-created courses, avoiding duplicates
+        const allCourses = [...defaultCourses];
+        userCreatedCourses.forEach(course => {
+          if (!allCourses.find(c => c.id === course.id)) {
+            allCourses.push(course);
+          }
+        });
         
-        return uniqueCourses;
+        console.log('Total published courses:', allCourses.length);
+        return allCourses;
       },
       get_course: async (id: string) => {
-        // First check shared storage
-        const sharedCourse = sharedStorage.getCourse(id);
-        if (sharedCourse) {
-          return sharedCourse;
+        // Get all courses (default + user-created)
+        const allCourses = await this.courseActor.get_published_courses();
+        const course = allCourses.find((c: any) => c.id === id);
+        
+        if (course) {
+          console.log('Found course:', course.title);
+          return course;
         }
         
-        // Then check default courses
-        const allCourses = await this.courseActor.get_published_courses();
-        return allCourses.find((c: any) => c.id === id) || null;
+        console.log('Course not found:', id);
+        return null;
       },
       add_course_section: async (course_id: string, title: string, content: string) => {
         const course = sharedStorage.getCourse(course_id);
@@ -704,45 +1366,37 @@ Mastering Solidity is essential for building secure and efficient smart contract
           tips_received: 0
         };
         
-        // Store note globally so all users can see it
-        const allNotes = JSON.parse(localStorage.getItem('all_peer_notes') || '[]');
-        allNotes.push(note);
-        localStorage.setItem('all_peer_notes', JSON.stringify(allNotes));
+        // Store in shared storage for global visibility
+        sharedStorage.addPeerNote(note);
         
         return note;
       },
       get_user_notes: async () => {
         const principal = this.identity?.getPrincipal().toText() || 'mock-principal';
-        const allNotes = JSON.parse(localStorage.getItem('all_peer_notes') || '[]');
-        
-        // Return user's own notes
-        return allNotes.filter((note: any) => note.author === principal);
+        return sharedStorage.getUserNotes(principal);
       },
       get_course_notes: async (course_id: string) => {
-        const allNotes = JSON.parse(localStorage.getItem('all_peer_notes') || '[]');
-        
-        // Return all notes for a specific course
-        return allNotes.filter((note: any) => note.course_id === course_id);
+        return sharedStorage.getCourseNotes(course_id);
       },
       get_all_notes: async () => {
-        // Return all notes from all users
-        return JSON.parse(localStorage.getItem('all_peer_notes') || '[]');
+        return sharedStorage.getPeerNotes();
       },
       tip_peer_note: async (note_id: string, amount: number, message: string) => {
-        // Update the note's tip count
-        const allNotes = JSON.parse(localStorage.getItem('all_peer_notes') || '[]');
-        const noteIndex = allNotes.findIndex((note: any) => note.id === note_id);
+        // Find and update the note in shared storage
+        const notes = sharedStorage.getPeerNotes();
+        const note = notes.find((n: any) => n.id === note_id);
         
-        if (noteIndex !== -1) {
-          allNotes[noteIndex].tips_received += amount;
-          localStorage.setItem('all_peer_notes', JSON.stringify(allNotes));
+        if (note) {
+          sharedStorage.updatePeerNote(note_id, {
+            tips_received: note.tips_received + amount
+          });
         }
         
         return {
           id: Math.random().toString(36).substr(2, 9),
           note_id,
           tipper: this.identity?.getPrincipal().toText() || 'mock-tipper',
-          recipient: 'mock-recipient',
+          recipient: note?.author || 'mock-recipient',
           amount,
           timestamp: Date.now() * 1000000,
           message
@@ -755,40 +1409,19 @@ Mastering Solidity is essential for building secure and efficient smart contract
     if (!this.authClient) return false;
 
     return new Promise<boolean>((resolve) => {
-      try {
-        this.authClient!.login({
-          identityProvider: import.meta.env.VITE_DFX_NETWORK === 'local' 
-            ? `${host}/?canisterId=${import.meta.env.VITE_CANISTER_ID_INTERNET_IDENTITY || 'rdmx6-jaaaa-aaaah-qdrqq-cai'}`
-            : 'https://identity.ic0.app',
-          onSuccess: () => {
-            try {
-              this.identity = this.authClient!.getIdentity();
-              this.agent = new HttpAgent({
-                host,
-                identity: this.identity,
-                verifyQuerySignatures: false
-              });
-              
-              if (import.meta.env.VITE_DFX_NETWORK === 'local') {
-                this.agent.fetchRootKey().catch(console.warn);
-              }
-              
-              this.createActors();
-              resolve(true);
-            } catch (error) {
-              console.warn('Login success handler failed:', error);
-              resolve(false);
-            }
-          },
-          onError: (error) => {
-            console.warn('Login failed:', error);
-            resolve(false);
-          },
-        });
-      } catch (error) {
-        console.warn('Login initiation failed:', error);
-        resolve(false);
-      }
+      this.authClient!.login({
+        identityProvider: 'https://identity.ic0.app',
+        onSuccess: () => {
+          this.identity = this.authClient!.getIdentity();
+          this.agent = new HttpAgent({
+            host,
+            identity: this.identity,
+          });
+          this.createActors();
+          resolve(true);
+        },
+        onError: () => resolve(false),
+      });
     });
   }
 
@@ -835,16 +1468,25 @@ Mastering Solidity is essential for building secure and efficient smart contract
     }
 
     try {
+      console.log('Starting course completion process...');
+      
       // 1. Complete the course in student canister
       const certificate = await this.studentActor.complete_course(courseId, courseTitle);
+      console.log('Course completed, certificate generated:', certificate);
       
       // 2. Award tokens to the student
       const principal = this.identity.getPrincipal().toText();
-      await this.tokenActor.reward_course_completion(
+      const tokenResult = await this.tokenActor.reward_course_completion(
         principal,
         tokenReward,
         courseId
       );
+      console.log('Tokens awarded:', tokenResult);
+
+      // 3. Force refresh token balance in UI
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('tokenBalanceUpdate'));
+      }, 100);
 
       // 3. Return certificate for PDF generation
       return certificate;
@@ -857,15 +1499,19 @@ Mastering Solidity is essential for building secure and efficient smart contract
   // Method to get current token balance
   async getTokenBalance(): Promise<number> {
     if (!this.tokenActor || !this.identity) {
-      return 0;
+      console.log('Token actor or identity not available, returning default balance');
+      return 100; // Default balance
     }
 
     try {
       const principal = this.identity.getPrincipal().toText();
-      return await this.tokenActor.get_balance(principal);
+      console.log('Getting token balance for principal:', principal);
+      const balance = await this.tokenActor.get_balance(principal);
+      console.log('Token balance retrieved:', balance);
+      return balance;
     } catch (error) {
-      console.error('Error fetching token balance:', error);
-      return 0;
+      console.error('Error getting token balance:', error);
+      return 100; // Return default on error
     }
   }
 

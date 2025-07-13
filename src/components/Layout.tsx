@@ -42,11 +42,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       if (isAuthenticated && agentService.token) {
         try {
           const balance = await agentService.getTokenBalance();
+          console.log('=== TOKEN BALANCE FETCHED ===', balance);
           setTokenBalance(balance);
         } catch (error) {
-          console.warn('Error fetching token balance:', error);
-          // Set a default balance to prevent UI issues
-          setTokenBalance(100);
+          console.error('Error fetching token balance:', error);
         }
       }
     };
@@ -55,34 +54,24 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     
     // Listen for token balance updates
     const handleTokenUpdate = () => {
+      console.log('=== TOKEN BALANCE UPDATE EVENT RECEIVED ===');
+      setTimeout(() => {
       fetchTokenBalance();
+      }, 100);
     };
     
     window.addEventListener('tokenBalanceUpdate', handleTokenUpdate);
     
     // Listen for global data updates (simulates blockchain events)
     const handleGlobalUpdate = () => {
-      // Refresh any data that might have changed
-      try {
-        fetchTokenBalance();
-      } catch (error) {
-        console.warn('Error in global update handler:', error);
-      }
+      fetchTokenBalance();
     };
     
-    try {
-      window.addEventListener('globalDataUpdate', handleGlobalUpdate);
-    } catch (error) {
-      console.warn('Failed to add global update listener:', error);
-    }
+    window.addEventListener('globalDataUpdate', handleGlobalUpdate);
     
     return () => {
-      try {
-        window.removeEventListener('tokenBalanceUpdate', handleTokenUpdate);
-        window.removeEventListener('globalDataUpdate', handleGlobalUpdate);
-      } catch (error) {
-        console.warn('Failed to remove event listeners:', error);
-      }
+      window.removeEventListener('tokenBalanceUpdate', handleTokenUpdate);
+      window.removeEventListener('globalDataUpdate', handleGlobalUpdate);
     };
   }, [isAuthenticated]);
 
@@ -101,10 +90,14 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     { name: 'Home', href: '/', icon: HomeIcon },
     { name: 'Courses', href: '/courses', icon: AcademicCapIcon },
     { name: 'Dashboard', href: '/dashboard', icon: UserIcon },
-    { name: 'Educator', href: '/educator', icon: PresentationChartBarIcon },
     { name: 'Peer Exchange', href: '/peer-exchange', icon: CurrencyDollarIcon },
   ];
 
+  // Add educator navigation only if user is an educator
+  const { isEducator } = useAuth();
+  const fullNavigation = isEducator 
+    ? [...navigation.slice(0, 3), { name: 'Educator', href: '/educator', icon: PresentationChartBarIcon }, ...navigation.slice(3)]
+    : navigation;
   const handleLogout = async () => {
     await logout();
     setIsMobileMenuOpen(false);
@@ -130,7 +123,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 
                 {/* Desktop Navigation */}
                 <div className="hidden md:ml-6 md:flex md:space-x-8">
-                  {navigation.map((item) => {
+                  {fullNavigation.map((item) => {
                     const Icon = item.icon;
                     return (
                       <Link
@@ -225,7 +218,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 className="md:hidden bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700"
               >
                 <div className="px-2 pt-2 pb-3 space-y-1">
-                  {navigation.map((item) => {
+                  {fullNavigation.map((item) => {
                     const Icon = item.icon;
                     return (
                       <Link

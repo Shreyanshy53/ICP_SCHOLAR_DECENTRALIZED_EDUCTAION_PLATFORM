@@ -152,88 +152,215 @@ const CourseDetail: React.FC = () => {
     if (!course || !courseId || !userProfile) return;
 
     try {
-      // Use the enhanced completion method that handles both course completion and token rewards
-      const certificate = await agentService.completeCourseWithRewards(
-        courseId,
-        course.title,
-        course.token_reward
-      );
+      console.log('=== STARTING COURSE COMPLETION ===');
+      console.log('Course:', course.title);
+      console.log('User:', userProfile.name);
+      console.log('Token reward:', course.token_reward);
       
-      // Update enrollment status
+      const loadingToast = toast.loading('Completing course...');
+      
+      // Step 1: Complete the course
+      if (!agentService.student) {
+        throw new Error('Student service not available');
+      }
+      
+      const certificate = await agentService.student.complete_course(courseId, course.title);
+      console.log('=== CERTIFICATE CREATED ===', certificate);
+      
+      // Step 2: Award tokens
+      if (!agentService.token) {
+        throw new Error('Token service not available');
+      }
+      
+      const principal = agentService.getPrincipal()?.toText();
+      if (!principal) {
+        throw new Error('No principal found');
+      }
+      
+      const tokenResult = await agentService.token.reward_course_completion(
+        principal,
+        course.token_reward,
+        courseId
+      );
+      console.log('=== TOKENS AWARDED ===', tokenResult);
+      
+      // Update enrollment status locally
       setEnrollment(prev => prev ? {
         ...prev,
         completed: true,
         completed_at: Date.now() * 1000000
       } : null);
       
-      toast.success(`🎉 Congratulations! You've completed the course and earned ${course.token_reward} tokens!`);
+      toast.dismiss(loadingToast);
+      toast.success(`🎉 Course completed! Earned ${course.token_reward} tokens!`);
       
-      // Generate certificate
-      generateCertificate(certificate);
+      // Force multiple token balance updates
+      console.log('=== TRIGGERING TOKEN BALANCE UPDATES ===');
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('tokenBalanceUpdate'));
+        window.dispatchEvent(new CustomEvent('globalDataUpdate'));
+      }, 100);
       
-      // Trigger a token balance refresh in the parent component
-      window.dispatchEvent(new CustomEvent('tokenBalanceUpdate'));
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('tokenBalanceUpdate'));
+      }, 500);
+      
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('tokenBalanceUpdate'));
+      }, 1000);
+      
+      // Generate certificate with delay
+      console.log('=== GENERATING CERTIFICATE PDF ===');
+      setTimeout(() => {
+        try {
+          generateCertificate(certificate);
+        } catch (pdfError) {
+          console.error('PDF generation error:', pdfError);
+          toast.error('Certificate completed but PDF download failed. Please try again.');
+        }
+      }, 1000);
+      
     } catch (error) {
       console.error('Error completing course:', error);
-      toast.error('Failed to complete course');
+      toast.error('Failed to complete course. Please try again.');
     }
   };
 
   const generateCertificate = (certificate: any) => {
-    const doc = new jsPDF();
-    
-    // Certificate design
-    doc.setFillColor(240, 248, 255);
-    doc.rect(0, 0, 210, 297, 'F');
-    
-    // Border
-    doc.setDrawColor(79, 70, 229);
-    doc.setLineWidth(3);
-    doc.rect(10, 10, 190, 277);
-    
-    // Title
-    doc.setFontSize(28);
-    doc.setTextColor(79, 70, 229);
-    doc.text('Certificate of Completion', 105, 50, { align: 'center' });
-    
-    // Subtitle
-    doc.setFontSize(16);
-    doc.setTextColor(100, 100, 100);
-    doc.text('ICP Scholar Platform', 105, 70, { align: 'center' });
-    
-    // Student name
-    doc.setFontSize(20);
-    doc.setTextColor(0, 0, 0);
-    doc.text(`This certifies that`, 105, 110, { align: 'center' });
-    
-    doc.setFontSize(24);
-    doc.setTextColor(79, 70, 229);
-    doc.text(userProfile?.name || 'Student', 105, 130, { align: 'center' });
-    
-    // Course details
-    doc.setFontSize(16);
-    doc.setTextColor(0, 0, 0);
-    doc.text('has successfully completed the course', 105, 150, { align: 'center' });
-    
-    doc.setFontSize(20);
-    doc.setTextColor(79, 70, 229);
-    doc.text(course?.title || 'Course Title', 105, 170, { align: 'center' });
-    
-    // Date
-    doc.setFontSize(14);
-    doc.setTextColor(100, 100, 100);
-    doc.text(`Completed on: ${new Date().toLocaleDateString()}`, 105, 200, { align: 'center' });
-    
-    // Certificate ID
-    doc.text(`Certificate ID: ${certificate.certificate_id}`, 105, 220, { align: 'center' });
-    
-    // Signature line
-    doc.setDrawColor(0, 0, 0);
-    doc.line(60, 250, 150, 250);
-    doc.text('ICP Scholar Platform', 105, 260, { align: 'center' });
-    
-    // Save the PDF
-    doc.save(`${course?.title || 'Course'}_Certificate.pdf`);
+    try {
+      console.log('=== STARTING PDF GENERATION ===');
+      console.log('Certificate data:', certificate);
+      console.log('User profile:', userProfile);
+      console.log('Course:', course?.title);
+      
+      // Check if jsPDF is available
+      if (!jsPDF) {
+        console.error('jsPDF not available');
+        toast.error('PDF library not loaded');
+        return;
+      }
+      
+      const doc = new jsPDF({
+        orientation: 'landscape',
+        unit: 'mm',
+        format: 'a4'
+      });
+      
+      console.log('PDF document created');
+      
+      // Certificate design with landscape orientation
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      
+      // Background
+      doc.setFillColor(250, 250, 255);
+      doc.rect(0, 0, pageWidth, pageHeight, 'F');
+      
+      // Decorative border
+      doc.setDrawColor(79, 70, 229);
+      doc.setLineWidth(2);
+      doc.rect(15, 15, pageWidth - 30, pageHeight - 30);
+      
+      // Inner border
+      doc.setDrawColor(199, 210, 254);
+      doc.setLineWidth(1);
+      doc.rect(20, 20, pageWidth - 40, pageHeight - 40);
+      
+      console.log('Borders added');
+      
+      // Title
+      doc.setFontSize(32);
+      doc.setTextColor(79, 70, 229);
+      doc.text('Certificate of Completion', pageWidth / 2, 45, { align: 'center' });
+      
+      // Subtitle
+      doc.setFontSize(18);
+      doc.setTextColor(100, 100, 100);
+      doc.text('ICP Scholar - Decentralized Education Platform', pageWidth / 2, 65, { align: 'center' });
+      
+      console.log('Headers added');
+      
+      // Student name
+      doc.setFontSize(16);
+      doc.setTextColor(0, 0, 0);
+      doc.text('This certifies that', pageWidth / 2, 90, { align: 'center' });
+      
+      doc.setFontSize(28);
+      doc.setTextColor(79, 70, 229);
+      const studentName = userProfile?.name || certificate.student_name || 'Student';
+      doc.text(studentName, pageWidth / 2, 115, { align: 'center' });
+      console.log('Student name added:', studentName);
+      
+      // Course details
+      doc.setFontSize(14);
+      doc.setTextColor(0, 0, 0);
+      doc.text('has successfully completed the course', pageWidth / 2, 130, { align: 'center' });
+      
+      doc.setFontSize(22);
+      doc.setTextColor(79, 70, 229);
+      const courseTitle = course?.title || certificate.course_title || 'Course Title';
+      
+      // Handle long course titles by wrapping text
+      const splitTitle = doc.splitTextToSize(courseTitle, pageWidth - 80);
+      doc.text(splitTitle, pageWidth / 2, 150, { align: 'center' });
+      
+      console.log('Course title added:', courseTitle);
+      
+      // Token reward
+      doc.setFontSize(14);
+      doc.setTextColor(34, 197, 94);
+      doc.text(`Token Reward: ${course?.token_reward || 0} ICP Scholar Tokens`, pageWidth / 2, 180, { align: 'center' });
+      
+      // Date
+      doc.setFontSize(12);
+      doc.setTextColor(100, 100, 100);
+      const completionDate = certificate.completion_date ? 
+        new Date(certificate.completion_date / 1000000) : new Date();
+      doc.text(`Completed on: ${completionDate.toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      })}`, pageWidth / 2, 200, { align: 'center' });
+      
+      // Certificate ID
+      doc.text(`Certificate ID: ${certificate.certificate_id}`, pageWidth / 2, 215, { align: 'center' });
+      
+      console.log('Date and ID added');
+      
+      // Blockchain verification
+      doc.setFontSize(10);
+      doc.setTextColor(120, 120, 120);
+      doc.text('This certificate is verified on the Internet Computer blockchain', pageWidth / 2, 230, { align: 'center' });
+      
+      // Signature line
+      doc.setDrawColor(0, 0, 0);
+      doc.setLineWidth(0.5);
+      doc.line(pageWidth / 2 - 40, 250, pageWidth / 2 + 40, 250);
+      doc.setFontSize(12);
+      doc.setTextColor(0, 0, 0);
+      doc.text('ICP Scholar Platform', pageWidth / 2, 260, { align: 'center' });
+      doc.setFontSize(10);
+      doc.setTextColor(100, 100, 100);
+      doc.text('Authorized Digital Signature', pageWidth / 2, 270, { align: 'center' });
+      
+      console.log('Signature section added');
+      
+      // Generate safe filename
+      const safeTitle = courseTitle
+        .replace(/[^a-z0-9\s]/gi, '')
+        .replace(/\s+/g, '_')
+        .substring(0, 20);
+      const fileName = `ICP_Scholar_${safeTitle}_Certificate.pdf`;
+      
+      console.log('=== SAVING PDF ===', fileName);
+      doc.save(fileName);
+      console.log('=== PDF SAVED SUCCESSFULLY ===');
+      
+      toast.success('Certificate downloaded successfully!');
+    } catch (error) {
+      console.error('Error in generateCertificate:', error);
+      toast.error('Failed to generate certificate. Please try again.');
+    }
   };
 
   const isSectionCompleted = (sectionId: string) => {

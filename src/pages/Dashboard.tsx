@@ -7,7 +7,9 @@ import {
   TrophyIcon, 
   ChartBarIcon,
   ArrowRightIcon,
-  DocumentTextIcon
+  DocumentTextIcon,
+  PresentationChartBarIcon,
+  ChatBubbleLeftIcon
 } from '@heroicons/react/24/outline';
 import { useAuth } from '../hooks/useAuth';
 import { agentService } from '../services/agent';
@@ -32,7 +34,7 @@ const Dashboard: React.FC = () => {
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [tokenBalance, setTokenBalance] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
-  const { isAuthenticated, principal, getUserProfile } = useAuth();
+  const { isAuthenticated, principal, getUserProfile, isEducator } = useAuth();
   const userProfile = getUserProfile();
 
   useEffect(() => {
@@ -55,10 +57,8 @@ const Dashboard: React.FC = () => {
         }
 
         // Fetch token balance
-        if (agentService.token) {
-          const balance = await agentService.token.get_balance();
-          setTokenBalance(balance);
-        }
+        const balance = await agentService.getTokenBalance();
+        setTokenBalance(balance);
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
         toast.error('Failed to load dashboard data');
@@ -68,6 +68,21 @@ const Dashboard: React.FC = () => {
     };
 
     fetchDashboardData();
+    
+    // Listen for token balance updates
+    const handleTokenUpdate = () => {
+      const refreshBalance = async () => {
+        const balance = await agentService.getTokenBalance();
+        setTokenBalance(balance);
+      };
+      refreshBalance();
+    };
+    
+    window.addEventListener('tokenBalanceUpdate', handleTokenUpdate);
+    
+    return () => {
+      window.removeEventListener('tokenBalanceUpdate', handleTokenUpdate);
+    };
   }, [isAuthenticated]);
 
   const stats = [
@@ -283,6 +298,17 @@ const Dashboard: React.FC = () => {
                     Browse Courses
                   </div>
                 </Link>
+                {isEducator && (
+                  <Link
+                    to="/educator"
+                    className="block w-full text-left px-4 py-3 bg-purple-50 dark:bg-purple-900 text-purple-700 dark:text-purple-300 rounded-lg hover:bg-purple-100 dark:hover:bg-purple-800 transition-colors duration-200"
+                  >
+                    <div className="flex items-center">
+                      <PresentationChartBarIcon className="w-5 h-5 mr-3" />
+                      Educator Dashboard
+                    </div>
+                  </Link>
+                )}
                 <Link
                   to="/peer-exchange"
                   className="block w-full text-left px-4 py-3 bg-green-50 dark:bg-green-900 text-green-700 dark:text-green-300 rounded-lg hover:bg-green-100 dark:hover:bg-green-800 transition-colors duration-200"

@@ -148,10 +148,14 @@ const EducatorDashboard: React.FC = () => {
           newCourse.description,
           newCourse.token_reward
         );
+        console.log('Course created:', courseData);
         setCourses([...courses, courseData]);
         setShowCreateCourse(false);
         setNewCourse({ title: '', description: '', token_reward: 10 });
         toast.success('Course created successfully!');
+        
+        // Trigger global update so other users can see the new course
+        window.dispatchEvent(new CustomEvent('globalDataUpdate'));
       }
     } catch (error) {
       console.error('Error creating course:', error);
@@ -165,11 +169,12 @@ const EducatorDashboard: React.FC = () => {
 
     try {
       if (agentService.course) {
-        await agentService.course.add_course_section(
+        const updatedCourse = await agentService.course.add_course_section(
           showAddSection,
           newSection.title,
           newSection.content
         );
+        console.log('Section added to course:', updatedCourse);
         
         // Refresh courses
         const coursesData = await agentService.course.get_educator_courses();
@@ -188,13 +193,17 @@ const EducatorDashboard: React.FC = () => {
   const handlePublishCourse = async (courseId: string) => {
     try {
       if (agentService.course) {
-        await agentService.course.publish_course(courseId);
+        const publishedCourse = await agentService.course.publish_course(courseId);
+        console.log('Course published:', publishedCourse);
         
         // Refresh courses
         const coursesData = await agentService.course.get_educator_courses();
         setCourses(coursesData);
         
         toast.success('Course published successfully!');
+        
+        // Trigger global update so other users can see the published course
+        window.dispatchEvent(new CustomEvent('globalDataUpdate'));
       }
     } catch (error) {
       console.error('Error publishing course:', error);
@@ -238,10 +247,10 @@ const EducatorDashboard: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-                Educator Dashboard
+                🎓 Educator Dashboard
               </h1>
               <p className="mt-2 text-gray-600 dark:text-gray-400">
-                Create and manage your courses
+                Create and manage your courses on the ICP Scholar platform
               </p>
             </div>
             {profile && (
